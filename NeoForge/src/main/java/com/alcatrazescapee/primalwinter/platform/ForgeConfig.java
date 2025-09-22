@@ -3,6 +3,10 @@ package com.alcatrazescapee.primalwinter.platform;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import com.alcatrazescapee.primalwinter.PrimalWinter;
 import com.alcatrazescapee.primalwinter.util.ConfigPacket;
 import net.minecraft.core.registries.Registries;
@@ -101,8 +105,19 @@ public class ForgeConfig extends Config
 
     public void updateCaches()
     {
-        fogColorDayCache = extractColor(fogColorDayValue);
-        fogColorNightCache = extractColor(fogColorNightValue);
+        try (ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor()) {
+            scheduler.scheduleAtFixedRate(() -> {
+                if (client.isLoaded()) {
+                    fogColorDayCache = extractColor(fogColorDayValue);
+                    fogColorNightCache = extractColor(fogColorNightValue);
+                    scheduler.shutdown();
+
+                    LOGGER.info("Client config loaded. Caches updated.");
+                } else {
+                    LOGGER.info("Waiting for client config to load...");
+                }
+            }, 0, 10, TimeUnit.MILLISECONDS);
+        }
     }
 
     @Override
